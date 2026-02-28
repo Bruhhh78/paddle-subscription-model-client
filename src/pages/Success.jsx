@@ -1,0 +1,43 @@
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+
+const Success = () => {
+    const navigate = useNavigate();
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            navigate("/dashboard");
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, []);
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-500 to-emerald-600">
+
+            <div className="bg-white rounded-2xl shadow-2xl p-10 w-[400px] text-center animate-fadeIn">
+
+                <div className="w-20 h-20 bg-green-500 text-white text-4xl font-bold rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+                    ✓
+                </div>
+
+                <h1 className="text-2xl font-bold mb-3">
+                    Payment Successful!
+                </h1>
+
+                <p className="text-gray-600 mb-6">
+                    Your subscription has been activated successfully.
+                </p>
+
+                <button
+                    onClick={() => navigate("/dashboard")}
+                    className="bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 transition-all duration-300"
+                >
+                    Go to Dashboard
+                </button>
+
+            </div>
+        </div>
+    );
+};
+
+export default Success;
