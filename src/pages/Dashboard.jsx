@@ -12,11 +12,39 @@ const PLAN_LEVEL = {
 
 const Dashboard = () => {
   const { user, fetchUser } = useAuth();
+  const [timeLeft, setTimeLeft] = useState(null);
 
 
   useEffect(() => {
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    if (!user?.subscription?.trialEndsAt) return;
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const end = new Date(user.subscription.trialEndsAt).getTime();
+
+      const difference = end - now;
+
+      if (difference <= 0) {
+        setTimeLeft("Trial ended");
+        clearInterval(interval);
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (difference % (1000 * 60 * 60 * 24)) /
+        (1000 * 60 * 60)
+      );
+
+      setTimeLeft(`${days}d ${hours}h left`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   if (!user) {
     return (
@@ -25,6 +53,7 @@ const Dashboard = () => {
       </div>
     );
   }
+
 
   const status = user.subscription?.status || "inactive";
   const statusDisplay = STATUS_STYLE[status] || STATUS_STYLE.inactive;
@@ -101,6 +130,17 @@ const Dashboard = () => {
             </span>
           </p>
 
+          {user.subscription?.status === "trialing" && (
+            <div className="mt-4 p-4 bg-yellow-500/20 rounded-xl">
+              <p className="text-yellow-300 font-semibold">
+                Free Trial Active 🎉
+              </p>
+              <p className="text-sm">
+                {timeLeft}
+              </p>
+            </div>
+          )}
+
           {/* Customer ID */}
           <p className="mb-2">
             <span className="text-white/70">Paddle Customer ID:</span>{" "}
@@ -159,9 +199,9 @@ const Dashboard = () => {
                 onClick={async () => {
                   try {
                     await API.post("/resume-subscription");
-                      setTimeout(() => {
-                        fetchUser();
-                      }, 1200);
+                    setTimeout(() => {
+                      fetchUser();
+                    }, 1200);
                   } catch {
                     alert("Resume failed");
                   }

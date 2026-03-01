@@ -1,21 +1,33 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { API } from "../services/api";
 
 const Success = () => {
     const navigate = useNavigate();
     useEffect(() => {
 
-        const checkActivation = async () => {
-            const res = await API.get("/auth/user");
+        let timeout;
 
-            if (res.data.subscription?.status === "active") {
-                navigate("/dashboard");
-            } else {
-                setTimeout(checkActivation, 1500);
+        const checkActivation = async () => {
+            try {
+                const res = await API.get("/auth/user");
+
+                const status = res.data.subscription?.status;
+
+                if (status === "active" || status === "trialing") {
+                    navigate("/dashboard");
+                } else {
+                    timeout = setTimeout(checkActivation, 1500);
+                }
+
+            } catch {
+                timeout = setTimeout(checkActivation, 1500);
             }
         };
 
         checkActivation();
+
+        return () => clearTimeout(timeout);
 
     }, []);
 

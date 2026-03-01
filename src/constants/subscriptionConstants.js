@@ -12,4 +12,5 @@ export const STATUS_STYLE = {
     inactive: { color: "gray", label: "⚪ Inactive" },
     pausing: { color: "blue", label: "🔵 Will Pause by Period End" },
     paused: { color: "darkblue", label: "🔷 Paused" },
+    trialing: { color: "#facc15", label: "Trial Active" }
 };

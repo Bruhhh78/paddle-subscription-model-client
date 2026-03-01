@@ -14,6 +14,9 @@ const Pricing = () => {
     const [previewData, setPreviewData] = useState(null);
     const [selectedPrice, setSelectedPrice] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [coupon, setCoupon] = useState("");
+    const [couponStatus, setCouponStatus] = useState(null);
+    const [couponValid, setCouponValid] = useState(false);
 
     const confirmUpgrade = async () => {
         try {
@@ -22,6 +25,10 @@ const Pricing = () => {
             });
 
             setShowModal(false);
+
+            setTimeout(async () => {
+                await fetchUser();
+            }, 1500);;
 
             alert("Upgrade successful 🎉");
 
@@ -33,6 +40,24 @@ const Pricing = () => {
     useEffect(() => {
         fetchUser();
     }, []);
+
+    const handleApplyCoupon = async (priceId) => {
+        try {
+            const res = await API.post("/validate-coupon", {
+                priceId,
+                discountCode: coupon
+            });
+
+            setCouponStatus(
+                "Coupon Applied ✅"
+            );
+            setCouponValid(true);
+
+        } catch {
+            setCouponStatus("Coupon expired or invalid ❌");
+            setCouponValid(false);
+        }
+    };
 
     const handlePlan = async (priceId) => {
         try {
@@ -57,7 +82,10 @@ const Pricing = () => {
 
             // 🔥 New subscription case
             if (currentLevel === 0) {
-                const res = await API.post("/create-checkout", { priceId });
+                const res = await API.post("/create-checkout", {
+                    priceId,
+                    discountCode: couponValid ? coupon : null
+                });
                 const transactionId = res.data.transactionId;
 
                 window.Paddle.Checkout.open({
@@ -79,7 +107,12 @@ const Pricing = () => {
 
         const isCurrentPlan = priceId === currentPlan;
         const hasSubscription = currentLevel > 0;
-        const isUpgradeAllowed = hasSubscription && targetLevel > currentLevel;
+        const isTrialing = user?.subscription?.status === "trialing";
+
+        const isUpgradeAllowed =
+            hasSubscription &&
+            targetLevel > currentLevel &&
+            !isTrialing;
 
         // 🔴 Annual user → hide other plans
         if (currentLevel === 3 && !isCurrentPlan) {
@@ -88,7 +121,10 @@ const Pricing = () => {
 
         return (
             <button
-                disabled={hasSubscription && !isUpgradeAllowed}
+                disabled={
+                    isCurrentPlan ||
+                    (hasSubscription && !isUpgradeAllowed)
+                }
                 onClick={() => handlePlan(priceId)}
                 className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 ${(isUpgradeAllowed || !hasSubscription)
                     ? "bg-indigo-600 hover:bg-indigo-700"
@@ -99,9 +135,11 @@ const Pricing = () => {
                     ? "Current Plan"
                     : !hasSubscription
                         ? "Choose Plan"
-                        : isUpgradeAllowed
-                            ? "Upgrade Plan 🚀"
-                            : "Not Available"}
+                        : isTrialing
+                            ? "Upgrade Disabled During Trial"
+                            : isUpgradeAllowed
+                                ? "Upgrade Plan 🚀"
+                                : "Not Available"}
             </button>
         );
     };
@@ -117,9 +155,35 @@ const Pricing = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white py-20 px-6">
 
+            <div className="mb-8 text-center space-x-3">
+                <input
+                    type="text"
+                    placeholder="Enter discount code"
+                    value={coupon}
+                    onChange={(e) => setCoupon(e.target.value)}
+                    className="px-4 py-2 rounded-xl text-black"
+                />
+
+                <button
+                    onClick={() =>
+                        handleApplyCoupon("pri_01kjhpqk173gteddh49xr0w5ff")
+                    }
+                    className="bg-green-600 px-4 py-2 rounded-xl"
+                >
+                    Apply
+                </button>
+
+                {couponStatus && (
+                    <p className="mt-3 text-sm">
+                        {couponStatus}
+                    </p>
+                )}
+            </div>
+
             <h1 className="text-4xl font-bold text-center mb-16">
                 Choose Your Plan 🚀
             </h1>
+
 
             <div className="flex flex-wrap justify-center gap-10">
 
@@ -167,14 +231,10 @@ const Pricing = () => {
                             </div>
 
                             <div className="flex justify-between">
-                                <span>Full Price:</span>
+                                <span>Full Plan Price:</span>
                                 <span>
-                                    {previewData.currency} {previewData.fullPrice / 100}
+                                    {previewData.currency} {previewData.fullPlanPrice}
                                 </span>
-                            </div>
-
-                            <div className="text-sm text-gray-600 mt-4">
-                                You will be charged the prorated difference immediately.
                             </div>
 
                         </div>
