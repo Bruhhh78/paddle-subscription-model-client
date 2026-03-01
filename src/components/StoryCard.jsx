@@ -1,11 +1,10 @@
 import { useNavigate } from "react-router-dom";
 
-const StoryCard = () => {
+const StoryCard = ({ buttonText }) => {
   const navigate = useNavigate();
 
   return (
     <div className="flex justify-center items-center">
-
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 
                     rounded-3xl p-8 w-full max-w-md 
                     shadow-2xl 
@@ -26,11 +25,10 @@ const StoryCard = () => {
                    transition-all duration-300 
                    hover:bg-indigo-100 hover:scale-105 shadow-lg"
         >
-          Upgrade Now 🚀
+          {buttonText}
         </button>
 
       </div>
-
     </div>
   );
 };

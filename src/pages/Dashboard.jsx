@@ -2,18 +2,22 @@ import { useEffect, useState } from "react";
 import { API } from "../services/api";
 import StoryCard from "../components/StoryCard.jsx";
 import { PLAN_MAP, STATUS_STYLE } from "../constants/subscriptionConstants.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
+const PLAN_LEVEL = {
+  "pri_01kjhpqk173gteddh49xr0w5ff": 1, // Monthly
+  "pri_01kjhpvh54yw0efjdejtae7hd7": 2, // Quarterly
+  "pri_01kjhpy7h5yp81skqz2zbvbf2y": 3  // Annual
+};
 
 const Dashboard = () => {
-  const [user, setUser] = useState(null);
+  const { user, fetchUser } = useAuth();
+
 
   useEffect(() => {
-    API.get("/auth/user")
-      .then(res => setUser(res.data))
-      .catch(() => setUser(null));
+    fetchUser();
   }, []);
 
-  // 🔥 FIRST guard user
   if (!user) {
     return (
       <div style={{ padding: 40 }}>
@@ -22,11 +26,29 @@ const Dashboard = () => {
     );
   }
 
-  // 🔥 THEN compute subscription UI
-
   const status = user.subscription?.status || "inactive";
   const statusDisplay = STATUS_STYLE[status] || STATUS_STYLE.inactive;
 
+  const currentPlan = user.subscription?.plan || null;
+  const currentLevel = PLAN_LEVEL[currentPlan] || 0;
+
+  // 🔥 Hide card if paused or canceling
+  const shouldHideStoryCard =
+    status === "paused" ||
+    status === "canceling";
+
+  // 🔥 Decide StoryCard button text
+  let storyButtonText = "";
+
+  if (status === "inactive") {
+    storyButtonText = "Create Subscription Plan 🚀";
+  }
+  else if (status === "active" && currentLevel === 3) {
+    storyButtonText = "View Subscription 📄";
+  }
+  else if (status === "active" && currentLevel < 3) {
+    storyButtonText = "Upgrade Your Plan 🚀";
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 text-white py-16 px-6">
@@ -35,14 +57,12 @@ const Dashboard = () => {
 
         {/* Welcome Section */}
         <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl mb-10 transition-all duration-500 hover:shadow-purple-500/30">
-
           <div className="flex items-center gap-6">
             <img
               src={user.picture}
               alt="profile"
               className="w-20 h-20 rounded-full border-4 border-white shadow-lg"
             />
-
             <div>
               <h2 className="text-3xl font-bold">
                 Welcome, {user.name} 👋
@@ -77,7 +97,7 @@ const Dashboard = () => {
           <p className="mb-2">
             <span className="text-white/70">Plan:</span>{" "}
             <span className="font-semibold">
-              {PLAN_MAP[user.subscription?.plan] || "No active plan"}
+              {PLAN_MAP[currentPlan] || "No active plan"}
             </span>
           </p>
 
@@ -98,19 +118,15 @@ const Dashboard = () => {
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4 mt-6">
 
-            {user.subscription?.status === "active" && (
+            {status === "active" && (
               <>
                 <button
                   onClick={async () => {
                     try {
                       await API.post("/cancel-subscription");
-                      setUser(prev => ({
-                        ...prev,
-                        subscription: {
-                          ...prev.subscription,
-                          status: "canceling"
-                        }
-                      }));
+                      setTimeout(() => {
+                        fetchUser();
+                      }, 1200);
                     } catch {
                       alert("Cancellation failed");
                     }
@@ -124,13 +140,9 @@ const Dashboard = () => {
                   onClick={async () => {
                     try {
                       await API.post("/pause-subscription");
-                      setUser(prev => ({
-                        ...prev,
-                        subscription: {
-                          ...prev.subscription,
-                          status: "paused"
-                        }
-                      }));
+                      setTimeout(() => {
+                        fetchUser();
+                      }, 1200); // 1.2 seconds
                     } catch {
                       alert("Pause failed");
                     }
@@ -142,18 +154,14 @@ const Dashboard = () => {
               </>
             )}
 
-            {user.subscription?.status === "paused" && (
+            {status === "paused" && (
               <button
                 onClick={async () => {
                   try {
                     await API.post("/resume-subscription");
-                    setUser(prev => ({
-                      ...prev,
-                      subscription: {
-                        ...prev.subscription,
-                        status: "active"
-                      }
-                    }));
+                      setTimeout(() => {
+                        fetchUser();
+                      }, 1200);
                   } catch {
                     alert("Resume failed");
                   }
@@ -165,17 +173,19 @@ const Dashboard = () => {
             )}
           </div>
 
-          {user.subscription?.status === "canceling" && (
+          {status === "canceling" && (
             <p className="mt-6 text-yellow-300 italic">
               Your subscription will end at the end of this billing period.
             </p>
           )}
         </div>
 
-        {/* Premium Feature Card */}
-        <div className="mt-12">
-          <StoryCard />
-        </div>
+        {/* 🔥 Story Card Section */}
+        {!shouldHideStoryCard && storyButtonText && (
+          <div className="mt-12">
+            <StoryCard buttonText={storyButtonText} />
+          </div>
+        )}
 
         {/* Logout */}
         <div className="text-center mt-10">

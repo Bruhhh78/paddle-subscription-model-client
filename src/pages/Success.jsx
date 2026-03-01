@@ -4,11 +4,19 @@ import { useEffect } from "react";
 const Success = () => {
     const navigate = useNavigate();
     useEffect(() => {
-        const timer = setTimeout(() => {
-            navigate("/dashboard");
-        }, 3000);
 
-        return () => clearTimeout(timer);
+        const checkActivation = async () => {
+            const res = await API.get("/auth/user");
+
+            if (res.data.subscription?.status === "active") {
+                navigate("/dashboard");
+            } else {
+                setTimeout(checkActivation, 1500);
+            }
+        };
+
+        checkActivation();
+
     }, []);
 
     return (
